@@ -1,0 +1,369 @@
+---
+title: "Climate and Conflict - Group 1"
+author: "Alexandra DeKinder, Ameya Karnad, Kulkanya Lekhyananda, Nitasha Nair"
+output: 
+  pdf_document:
+    fig_caption: false
+---
+
+
+
+# 1. Introduction
+
+
+## General Information and Conflict in West Africa
+
+The rise in violence and conflict in West Africa since 2010 has sparked concerns that emerging threats could derail hard-won economic gains and undermine future development. The multiple forms of violence in West Africa overlap to form an interlocking and mutating landscape of conflict across the region. Lines of potential fracture, such as religious, ethnic, cultural, or linguistic differences, have also contributed to the instability[^fn1].
+
+Moreover, the population is also growing. There were approximately 30 million people living in the West Africa in 1950. The population is expected to reach close to 1 billion by 2050[^fn2].
+
+West Africa has one of the most mobile populations in the world; the migratory populations that have at times been seen as contributing to instability and conflict as a result of competition over land, resources, and jobs are also a key motor that drives the economies of the subregion.
+
+## West African Climate 
+
+West Africa is one of the most vulnerable region to climate change. Its temperature is projected to be 1.5 times higher than the global average[^fn3]. The region experiences two main climate season - the wet season during April to October and the dry Season covering November through April[^fn4]. The region on average has rainfall less than 2,000 mm per year. The main factor for climate variability in the region is the sea-surface temperature[^fn5]. Although, it has low rainfall on average, the region often experiences floods when the normal monsoon season is associated with the periodic warming of the Pacific Ocean. The region also experiences droughts which last for decades, dating back to the 17th century.
+
+In this research we are trying to explore the association between the climate change and natural resource shortage, and resultant violent conflicts in the West Africa Region. 
+
+\newpage
+
+# Research Question and Hypothesis
+
+Violent Conflict has lots of dimensions. We are looking at conflict through the lens of natural resource shortages.  Climate change acts as a threat multiplier and in conjunction with other factors, has the ability to increase underlying vulnerabilities (refer to Figure 1). 
+
+In West Africa's case, increased drought frequency and severity, compounded by an increasingly variable climate can force nomadic herders to change their itineraries and compete for water and land with other communities.  Combined with underlying social and economic factors like demographic change, changing land use pattern and poverty, it leads to increased water and land scarcity. The change in access to critical natural resources increases the fragility and acts as a key driver of conflict in the region. 
+
+
+![](Conflict driver.png)
+In our analysis, we focus on one of the countries in West Africa - Senegal. Although historically serving as one of West Africa's politically stable anchors, Senegal represents, at a country-level, many of the characteristics that the region is experiencing, including an uptick in migration, resource shortages, and high-risk areas. In addition, the country has less inter-ethnic clashes which might result in better control for confounding variables. 
+
+
+![](senegal.png)
+Senegal is divided into 45 administrative departments as shown in Figure 2, which we will use as our unit of analysis.
+
+\newpage
+
+# 2. Data
+
+There are 4 main datasets used in the analysis. They are
+
+- Conflict data 
+- Climate data
+
+The two datasets can be accessed from the Social Conflict Analysis Database (SCAD) database through the Cross-National Data on Sub-National Violence website[^fn6].
+
+- Food price data from the World Food Programme database[^fn7].
+- Biomass data produced by Action Contre La Faim[^fn8].
+
+Along with these datasets, a department wise shapefile for Senegal was used create Choropleth graphs. 
+
+
+## Data cleaning and preprocessing
+
+The common issues that were found across most of the datasets are conflicts in the names. Some of the department names were recorded in different languages, English and French. In this case, we have to manually corrected the name to be consistent in spelling for cases such as "Thiès" (French) and "Thies" (English). Here we convert the spelling into its English format.  Other common issues including dates format, which need to be consistent in order to be able to merge the datasets.  
+
+The cleaning process for each of the datasets is as follows. 
+
+### Conflict and Climate data
+
+The Conflict data was available both in daily-region wise and monthly-department wise. We have decided to use the monthly-department wise datasets as they were more informative and were also on the same level with other datasets  Finally, 4 variables (year_month, location, temperature, and rainfall) were selected to be included in the final analysis. 
+
+### Food price
+
+![](food_data.png)
+Figure 3 shows that the Food Price data was already available in a logical way.  However, the data was using market name for areas instead of Administrative department. Therefore, the market names needed to be changed to department name. In this step, we manually looked up the market name in Google Maps to see in which department that each market was located, as there was no available document explaining these details. During the process of changing the names, we found that there were four markets that could not be placed in the correct department. Due to the number of other markets we felt it was acceptable to just leave these observations out of the final data set. Other than the names, some rows and columns needed to be dropped from the dataset to be able to do the analysis in R. There were several columns that were just ID numbers that were not applicable to this data set so removing them did not remove any actual data.
+
+
+### Biomass
+
+The Biomass data was also already available in a relatively cleaned form. The only change needed be done was to convert from wide format to long format. Since the Biomass data was available in yearly while the other datasets were in available monthly, the biomass for the all months within a year will be kept common.  
+
+### Final Dataset
+
+The final dataset is the product from the merge of all the datasets mentioned earlier. It is in a monthly form for all departments. It includes variables such as Temperature (in C), Rainfall (in mm), Prices of Millet, Maize, Rice and Sorghum (in franc CFA per KG), biomass and number of conflicts.A snapshot of the dataset can be seen in figure 4
+
+![](final_dataset.png)
+
+\newpage
+
+# 3. Data Analysis
+
+## Linear Regression Model
+
+A basic linear model as indicated below was tested. 
+
+*Y = b0 + b1 \* Temp + b2 \* Rainfall + b3 \* Pr_Maize + b4 \* Pr_Rice + b5 \* Pr_Sorghum + b6 \* Pr_Millet + b7 \* Biomass *
+
+
+- The dependent variable Y here is the number of conflicts and the independent variables include temperature, Rainfall, prices of maize, millets, rice and sorghum and biomass
+- The main takeaw of the linear model is that the model is prone to failure as conflict incidents in the dataset is quite low. 
+- The R square which is an indicator of goodness of fit is also quite low (0.053) in the model and there were no significant correlations 
+
+
+## Classification Model - imbalanced
+
+In this model, the number of incidents was converted into a binary format Yes/No format (Yes - Conflict, No - No conflict for the month). Logistic regression was then applied, the model resulted in an accuracy of almost 98.2%, however it misclassified the incidents in the dataset as non-conflicts. The confusion matrix is an in figure 5
+
+```{r, echo=FALSE, fig.height= 3, fig.width=3, fig.align='center'}
+knitr::include_graphics("Class_mat.png")
+```
+
+We infer that this is due the imbalanced dataset where the number of non-incidents outnumber the number of incidents. 
+
+## Classification model - tweaking the logistic regression
+
+To maintain the class balance, we Undersampled the no conflict data. we then ran Logistic regression algorithm on it. The confusion matrix result are as in figure 6
+
+```{r , echo=FALSE, fig.height= 3, fig.width=3, fig.align='center'}
+knitr::include_graphics("6lr.png")
+```
+
+The Accuracy is 67.64% while the True Positive Rate is 100%. But , the False Positive is also high. This means a lot of event is misclassified as incidents. (There are more predicted conflict incidents than it is actually is.)
+The coefficients for each variable for the Logistic regression is as in the Figure 7. 
+
+```{r , echo=FALSE, fig.height= 3, fig.width=3, fig.align='center'}
+knitr::include_graphics("7lrcoff.png")
+```
+
+As expected, high prices correlate with the conflict incidents. Surprisigly, Temperature is negatively correlated with conflicts, which went against our hypothesis. a possible explaination for this is maybe that the effects of temperature on conflict have a lag with respect to time
+
+
+
+## Classification Model- Support Vector Machines
+
+
+A support-vector machine constructs a hyperplane or set of hyperplanes in a high-dimensional space, which can be used for classification.A good separation is achieved by the hyperplane that has the largest distance to the nearest training-data point of any class(Figure 9)
+
+```{r , echo=FALSE, fig.height= 3, fig.width=3, fig.align='center'}
+knitr::include_graphics("9SVMdiag.png")
+```
+
+The Accuracy of this model was 74.85% and the True positive Rate was 100%. The Confusion matrix is as in Figure 8
+
+```{r , echo=FALSE, fig.height= 3, fig.width=3, fig.align='center'}
+knitr::include_graphics("8SVM.png")
+```
+
+## Classification Model - Decision Trees
+
+The trees use a predictive model to go from  observations about an item to conclusions about the item's target value . The leaves represent class labels (Conflict or no conflict in this case) and branches represent conjunctions of features that lead to those class labels (Combinations of The independent variables of the model)
+
+The Accuracy of this model was 77.78% and the True positive Rate was 88.88%. The Confusion matrix is as in Figure 10
+
+```{r , echo=FALSE, fig.height= 3, fig.width=3, fig.align='center'}
+knitr::include_graphics("10decision.png")
+```
+
+
+
+## Historical data based Model
+
+- Conflicts mainly happen due to long term effects.
+- Not enough data for a Time series Classification model (LSTM)
+- We tried to model data for Bignona (The only region with enough conflict data)
+Used a logistic regression based model to predict using attributes of upto 3 months prior (Oversampled in this case)
+- Accuracy - 0.82 %
+- Data highly Inadequate for the model to be used for real time classification
+
+```{r , echo=FALSE, fig.height= 3, fig.width=3, fig.align='center'}
+knitr::include_graphics("11histo.png")
+```
+
+\newpage
+
+## Incident Case Study: the 2010 Sahel Drought
+
+The most severe climate incident in the West African Region is the Sahel Drought. Senegal is part of the Sahel which is the area between the Sahara Desert in the north and the African rainforest in the south of the continent. The Sahel has the climate similar to but not as extreme as the Sahara. This means, it often experience a very low level of rainfall. 
+
+```{r , echo=FALSE, fig.height= 3, fig.width=3, fig.align='center'}
+knitr::include_graphics("12droughts.png")
+```
+
+There were 5 major drought recorded in the history with the first one dated back to the 17th century. There are evidences that each time, the drought has lasted for as long as a decade[^fn9] and leads to extreme food scarcity (famine) as the water dried up in an already arid region. The possible causes for the drought includes tropical convection, the West African Monsoon, El Ñino, and deforestation. 
+
+The most recent drought recorded has begun in 2010 after the onset of El Ñino. Rainfall was reported to be at an all-time low in February 2010 and the drought situation became most severe in 2012 when the region was reported to be in both drought and famine. However, there is no formal evidence of the end period of the drought, but some sources mention that the situation recovered in 2017. 
+
+According to the above information, we chose to analyze data before and during the 2010 drought. 
+
+
+\newpage
+
+# 4. Conflict Dashboard
+
+We also built a Conflict Dashboard which could be used by the stakeholders to visualise the conflict data and the factors that may cause conflict
+
+The Conflict Dashboard is divided into 5 sections
+
+- Area - Distribution - Number of conflicts by Department/Region for given range of time
+- Region - Time - Number of Conflicts in a particular region over the years
+- Department - Time - Number of Conflicts in a particular department over the years
+- Choropleth - A spatial representation of conflict and its factors for given month-year
+- Prices - Trend of prices of various food grains.
+
+First, let us take a look at the use of Conflict Dashboard in the Sahel Drought Case study, and then look at each section separately
+
+## Use of Dashboard in the 2010 Sahel Drought case study
+
+First, let us look and compare conflict incidents in a Six year period. 
+
+```{r , echo=FALSE, out.width = "500px", fig.align='center'}
+knitr::include_graphics("13regconf20042009.png")
+```
+
+Figures 13 and 14 show the Regional Distribution for conflicts between the years 2004-2009 and 2010-2015 respectively. It is interesting to see that the years 2004-2009 were relatively conflict free, while the years 2010-2015 had high number of conflict incidents. This positively corelates with the 2010 Sahel Drought, indicating that droughts may have an impact on conflicts. 
+
+```{r , echo=FALSE, out.width = "500px", fig.align='center'}
+knitr::include_graphics("14regconf20102015.png")
+```
+
+Figure 15 shows the price trend of different food items from 2010-2015. We can see that the prices are steadily increasing from 2010 showing a corelation between prices and conflicts.
+
+```{r , echo=FALSE, out.width = "500px", fig.align='center'}
+knitr::include_graphics("15pricetrends.png")
+```
+
+## Other interesting insights and dashboard capabilities
+
+### Condition in Sedhiou have improved over the years
+
+The Sedhiou region, historically has been really volatile. With around 2000 conflict incident from 1990 to 2003. 
+```{r , echo=FALSE, out.width = "500px", fig.align='center'}
+knitr::include_graphics("16sedhiou19902003.png")
+```
+
+But recently, it looks like the conflict incidents have drastically decreased, with very minimal incident from 2004 to 2015 and has become comparitively peaceful 
+
+```{r , echo=FALSE, out.width = "500px", fig.align='center'}
+knitr::include_graphics("17sedhiou20042015.png")
+```
+
+
+### Region - Time and Department - Time graphs.
+
+The dashboard also has a Region - Time and Department - Time graphs. Let look at the Region - Time graph for the Capital Region, Dakar
+
+```{r , echo=FALSE, out.width = "500px", fig.align='center'}
+knitr::include_graphics("18rt dakar.png")
+```
+
+This shows the Number of Coflicts each year of the selected range for the selected department.
+
+Similarily, we also have the Department - Time graph, depicting a drilldown version for a particular department. Bignona in this case.
+
+```{r , echo=FALSE, out.width = "500px", fig.align='center'}
+knitr::include_graphics("19dt bignona.png")
+```
+
+### Choropleth
+
+The Choropleth map gives a spatial view of the entire country of sengal and gives information on how temperature, rainfall, prices or conflicts have been for a given month year. Figure 20, 21 and 22 are for Temperature, Rainfall and conflicts respectively
+
+```{r , echo=FALSE, out.width = "400px", fig.align='center'}
+knitr::include_graphics("20chorotemp.png")
+```
+
+```{r , echo=FALSE, out.width = "400px", fig.align='center'}
+knitr::include_graphics("21chororain.png")
+```
+
+```{r , echo=FALSE, out.width = "400px", fig.align='center'}
+knitr::include_graphics("22conf.png")
+```
+Note that the Conflicts graph is sparse as conflicts are quite rare
+
+By varying year and month, the choropleth maps allows the user to understand trends of how a variable is evolving over time. 
+
+\newpage 
+
+#5. Relevant Stakeholders
+
+This analysis around the intersectionality of conflict and climate would be relevant to many stakeholders who could use it to manage risks in their own operations. 
+
+- **Government officials ** across agencies who are in charge of policies related to disaster management, civil protection, agriculture, finance, food supply, water resources and others would benefit from understanding how one factor might affect another one and take mitigative action 
+
+- **International organizations** like the World Bank, UN or Red Cross who have significant investments  in the region and have the mandates to work in climate change related projects 
+
+- **Private sector** such as insurance agencies and healthcare providers could be another important stakeholder to help in service provision
+
+- And of course, the main beneficiaries of better policies and reduced conflicts are the **communities** on the ground 
+
+
+
+
+#6. Policy Recommendation and Application
+
+## Short-Medium Term 
+
+- There is a high correlation of food prices with violent conflicts and droughts, the govt can take action to regulate food prices in the short term to reduce the stress induced due to droughts 
+
+- The government use such an analysis to help control inflation be it through contractionary monetary policy(controlling money supply) or tightening fiscal policies (higher income/lower govt spending) to reduce conflicts.
+
+- This information could act as early warning systems for relevant national and international bodies to set in place processes to reduce risk of escalation  
+
+## Long Term
+
+- Understanding of the patterns of land and natural resource use can help better plan for future needs and allocate existing resources.Priority can be given to chronically affected areas for development or efficient allocation of resources. 
+
+- This information can be applied to extension services such as indexed insurance and health and educational provisions, as well as better natural resource management and enhanced coordinated climate change resilience building in regions around the world. 
+
+
+\newpage
+
+
+#7. Challenges
+
+## Challenges in Modeling Social Behavior and Conflicts
+
+- Humans behaviour is very complicated to be modelled accurately and with precission 
+
+- Conflict is a complex topic. The approach that we used considering factors like temp, rain, biomass and prices may not be enough to model conflict as a whole, . There are other factors that may correlate highly with Conflicts. (Example, migratory patterns, poverty rates, malnutrition etc) 
+
+- Data collection (especially in Senegal) is not always consistent over long periods of time or between regions, which result in data gaps and issues comparing across space. Such large gaps in data will hamper building a good model.  
+
+- Conflicts are rare event cases. We saw in Section 3 how horribly wrong trying to regress a model to predict number of conflicts can go. Trying to model rare event cases as this is really tough as we do not have enough information about conflict incidents
+
+
+
+## Policy Challenges.
+
+- Decision makers are often pressed for time and lack comprehensive analysis to take decisive action. Both climate change and conflict are multi-sectoral and complex issues which needs action to be taken at multiple levels. 
+
+- Atmost the models would be able to derive correlation but not causation which makes it difficult for decision makers to pinpoint a reason and take immediate action. More on the ground information would be needed to supplement the data from the model 
+
+- West Africa has one of the most mobile populations in the world, where nomadic herders cross national boundaries. Given this scenario, data collection, accessing and sharing is a challenge
+
+- Resources like water and land are connected and shared across regions and boundaries, the change in one part affects the resource in other parts. However, they are administratively managed at a national or local level. Understanding the changes holistically and managing these resources at a region level is important for its sustainability.  
+
+- Policymakers should not rely on results from models in isolation. Conflict is a complex topic with multiple confounding factors. Enhancing decision makers ability to understand and interpret information through appropriate training would be essential. 
+
+
+#8. Future Scope and Research
+
+There are large scope to build and expand this research, highlighting a few potential opportunities as follows  
+
+- Exploring the implication of climate change on spread of diseases. This could also be looked at to understand natural resource use and other correlated factors
+
+- As of now, there is little documented information around migratory patterns of pastoralists who make up majority of the population in the region. With big data sources improving, there is scope to better understand how people move and integrate that into the analysis
+
+- Supplementing conflict incidents with social media sentiment analysis
+
+- Another major source for data is satellite imagery which is only going to become more accurate and precise 
+This analysis can also be expanded to other countries
+
+
+
+
+
+
+
+
+[^fn1]: [Marc et al., The Challenge of Stability and Security in West Africa, http://www.worldbank.org/en/topic/fragilityconflictviolence/publication/the-challenge-of-stability-and-security-in-west-africa.]
+[^fn2]: [United Nation, "West African Population, 1950-2050," http://www.west-africa-brief.org/content/en/west-african-population-1950-2050.]
+[^fn3]: [Shepard, "Global warming: severe consequences for Africa," https://www.un.org/africarenewal/magazine/december-2018-march-2019/global-warming-severe-consequences-africa.]
+[^fn4]: [Zijlma, "A Brief Guide to Africa's Dry and Rainy Seasons, " https://www.tripsavvy.com/africas-dry-and-rainy-seasons-1453967.]
+[^fn5]: [Bader and Latif, "The impact of decadal-scale Indian Ocean sea surface temperature anomalies on Sahelian rainfall and the North Atlantic Oscillation," Geophysical Research Letters 30 (22), https://doi.org/10.1029/2003GL018426]
+[^fn6]: [http://cross-sub.org]
+[^fn7]: [https://data.humdata.org/dataset/wfp-food-prices]
+[^fn8]: [http://geosahel.info/Choosemap.aspx]
+[^fn9]: [ Gauter, "Analysis: Understanding the Sahel drought," Aljazeera, https://www.aljazeera.com/indepth/spotlight/saheldrought/2012/06/2012616174721352901.html]
+

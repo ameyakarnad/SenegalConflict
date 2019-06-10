@@ -1,5 +1,5 @@
 ---
-title: "DASH-board"
+title: "Conflict Dashboard"
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
@@ -18,13 +18,15 @@ library(dplyr)
 library(data.table)
 library(scales)
 library(rgdal)
-
+library(lubridate)
 
 assignInNamespace(x = "cedta.override", value = c(data.table:::cedta.override,"rmarkdown"), ns = "data.table")
 
 opts_chunk$set(echo = FALSE, comment="", warning = FALSE, message = FALSE, tidy.opts=list(width.cutoff=55), tidy = TRUE)
 
-data = fread("D:/Columbia/Spring 2019/Data Science and Public Policy/Final Project/scad_sen_m.csv")
+data = fread("D:/Columbia/Spring 2019/Data Science and Public Policy/Final Project/aa_final_full.csv")
+
+price_data = fread("D:/Columbia/Spring 2019/Data Science and Public Policy/Final Project/clean_wfp_food_prices_senegal.csv")
 
 myshp <- "D:\\Columbia\\Spring 2019\\Data Science and Public Policy\\Final Project\\SEN_adm_2\\SEN_adm2.shp"
 myfile <- readOGR(myshp)
@@ -37,16 +39,24 @@ theme_bare <- theme(
   axis.ticks = element_blank(), 
   axis.title.x = element_blank(), 
   axis.title.y = element_blank(),
-  legend.text=element_text(size=7),
-  legend.title=element_text(size=8),
+  legend.text=element_text(size=10),
+  legend.title=element_text(size=12),
   panel.background = element_blank(),
   panel.border = element_rect(colour = "gray", fill=NA, size=0.5)
 )
+
+theme_common <- theme(
+  axis.ticks.y = element_blank(),
+  axis.ticks.x = element_blank(),
+  axis.text=element_text(size=14),
+axis.title=element_text(size=14)
+) 
+
 ```
 Introduction
 ==================================================
 
-This is the DASH-board which provides analysis of Conflict incidents in Senegal
+This is the Conflict Dashboard which provides analysis of Conflict incidents in Senegal
 
 This analysis had data for `r sum(data[ACTION_ANY >= 1][,ACTION_ANY])` conflicts that happenend between the years 
 `r min(data[,YEAR])` and `r max(data[,YEAR])`
@@ -59,7 +69,7 @@ Row {data-heights = 400}
 -----------------------------------------------------------------------
 
 ```{r}
-areas <- c("Region","City")
+areas <- c("Region","Department")
 
 inputPanel(
   selectInput(inputId = "check_area", label = "Select Area:", choices = areas, selected = areas[1]),
@@ -79,11 +89,11 @@ renderPlot({
 
   ggplot(state_data, aes(x =  reorder(NAME_1,desc(count)), y = count, fill= NAME_1)) +
     geom_bar(position = "dodge", stat = "identity", show.legend = FALSE) +
-    theme(axis.ticks.y = element_blank(),plot.title = element_text(size = rel(1.2))) +
+    theme_common +
     labs(x = "Region", y = "Number of incidents")
     
   }
-  else if(input$check_area == "City"){
+  else if(input$check_area == "Department"){
     
   district_data <- data[ACTION_ANY >= 1 & YEAR >= input$area_date[1]  & YEAR <= input$area_date[2]] %>%
     group_by(NAME_2) %>%
@@ -92,8 +102,9 @@ renderPlot({
 
   ggplot(district_data, aes(x =  reorder(NAME_2,desc(count)), y = count, fill= NAME_2)) +
     geom_bar(position = "dodge", stat = "identity", show.legend = FALSE) +
-    theme(axis.ticks.y = element_blank(),plot.title = element_text(size = rel(1.2))) +
-    labs(x = "City", y = "Number of incidents")  
+    theme_common +
+    labs(x = "Department", y = "Number of incidents")  
+    
   }
 }
 ) 
@@ -127,13 +138,14 @@ year_reg <- data[ACTION_ANY >= 1 & NAME_1 == input$check_region & YEAR >= input$
   group_by(YEAR) %>%
   summarise(count = sum(ACTION_ANY))%>% 
   arrange(YEAR)
-
+min_y = max(input$region_date[1], 1990)
+max_y = min(input$region_date[2], 2015)
 ggplot(year_reg, aes(x =  YEAR, y = count)) +
   geom_count(show.legend = FALSE) +
-  theme(axis.ticks.y = element_blank(),plot.title = element_text(size = rel(1.2))) +
+  theme_common +
   labs(x = "Years", y = "Number of incidents") + 
   scale_y_continuous(breaks= pretty_breaks())+ 
-  scale_x_continuous(breaks= unique(sort(data[,YEAR])))
+  scale_x_continuous(limits=c(min_y, max_y),breaks= pretty_breaks())
 }
 ) 
 
@@ -142,7 +154,7 @@ ggplot(year_reg, aes(x =  YEAR, y = count)) +
 ```
 
 
-City - Time
+Department - Time
 ==================================================
 
 Row {data-heights = 400}
@@ -170,12 +182,14 @@ year_dist <- data[ACTION_ANY >= 1 & NAME_2 == input$check_dist & YEAR >= input$d
   summarise(count = sum(ACTION_ANY))%>% 
   arrange(YEAR)
 
+min_y = max(input$dist_date[1], 1990)
+max_y = min(input$dist_date[2], 2015) 
 ggplot(year_dist, aes(x =  YEAR, y = count)) +
   geom_count(show.legend = FALSE) +
-  theme(axis.ticks.y = element_blank(),plot.title = element_text(size = rel(1.2))) +
+  theme_common +
   labs(x = "Years", y = "Number of incidents") + 
   scale_y_continuous(breaks= pretty_breaks())+ 
-  scale_x_continuous(breaks= unique(sort(data[,YEAR])))
+  scale_x_continuous(limits=c(min_y, max_y),breaks= pretty_breaks())
 }
 ) 
 
@@ -184,54 +198,52 @@ ggplot(year_dist, aes(x =  YEAR, y = count)) +
 ```
 
 
-Naturals
-==================================================
+<!-- Factors -->
+<!-- ================================================== -->
 
-Row {data-heights = 500}
---------------------------------------------------
-
-
-
-```{r}
-
-natural_var <-  c("ELEV_MAX","OPEN_TERRAIN","FOREST", "GREG_NGROUPS", "WLMS_NLANG", "DIST2PROVCAP", "ROAD_LENGTH",
-                  "TEMP", "RAIN")
-
-choice <- c("Total", "Average")
-inputPanel(
-  selectInput(inputId = "sel_point", label = "Select Region:", choices =natural_var, selected = natural_var[1]),
-  selectInput(inputId = "sum_avg", label = "Select Region:", choices =choice, selected = choice[1])
-)
+<!-- Row {data-heights = 500} -->
+<!-- -------------------------------------------------- -->
 
 
 
+<!-- ```{r} -->
 
-renderPlot({
-  
-  var = input$sel_point
-  plot_data <- data[,.("point" = get(var), ACTION_ANY)]%>%
-    group_by(point) %>%
-    summarise(Total = sum(ACTION_ANY), count = n()) %>%
-    mutate(Average = Total/count) %>%
-    arrange(point)
-  
-  if (input$sum_avg == "Total"){
-    ggplot(plot_data, aes(x = point, y = Total)) +
-      geom_line() +
-      theme(axis.ticks.y = element_blank(),plot.title = element_text(size = rel(1.2))) +
-      labs(y = "Total number of Conflict incidents") + 
-      scale_y_continuous(breaks= pretty_breaks())
-  }
-  else if (input$sum_avg == "Average"){
-    ggplot(plot_data, aes(x = point, y = Average)) +
-      geom_line() +
-      theme(axis.ticks.y = element_blank(),plot.title = element_text(size = rel(1.2))) +
-      labs(y = "Average number of Conflict incidents") + 
-      scale_y_continuous(breaks= pretty_breaks())
-  }
-}
-) 
-```
+<!-- natural_var <-  c("TEMP", "RAIN", "Maize", "Millet", "Rice", "Sorghum", "biomass") -->
+
+<!-- choice <- c("Total", "Average") -->
+<!-- inputPanel( -->
+<!--   selectInput(inputId = "sel_point", label = "Select Factor:", choices =natural_var, selected = natural_var[1]), -->
+<!--   selectInput(inputId = "sum_avg", label = "conflict level:", choices =choice, selected = choice[1]) -->
+<!-- ) -->
+
+
+
+<!-- renderPlot({ -->
+
+<!--   var = input$sel_point -->
+<!--   plot_data <- data[,.("point" = get(var), ACTION_ANY)]%>% -->
+<!--     group_by(point) %>% -->
+<!--     summarise(Total = sum(ACTION_ANY), count = n()) %>% -->
+<!--     mutate(Average = Total/count) %>% -->
+<!--     arrange(point) -->
+
+<!--   if (input$sum_avg == "Total"){ -->
+<!--     ggplot(plot_data, aes(x = point, y = Total)) + -->
+<!--       geom_line() + -->
+<!--       theme_common + -->
+<!--       labs(y = "Total number of Conflict incidents", x =var ) +  -->
+<!--       scale_y_continuous(breaks= pretty_breaks()) -->
+<!--   } -->
+<!--   else if (input$sum_avg == "Average"){ -->
+<!--     ggplot(plot_data, aes(x = point, y = Average)) + -->
+<!--       geom_line() + -->
+<!--       theme_common + -->
+<!--       labs(y = "Average number of Conflict incidents", x =var) +  -->
+<!--       scale_y_continuous(breaks= pretty_breaks()) -->
+<!--   } -->
+<!-- } -->
+<!-- )  -->
+<!-- ``` -->
 
 Chorolpleth
 ==================================================
@@ -242,13 +254,14 @@ Row {data-heights = 500}
 
 
 ```{r}
-natural_var <-  c("OPEN_TERRAIN","FOREST", "ROAD_LENGTH","TEMP", "RAIN", "ACTION_ANY")
+all_var <-  c("TEMP", "RAIN", "Maize", "Millet", "Rice", "Sorghum", "biomass", "ACTION_ANY")
+
 years = unique(data$YEAR)
 month = 1:12
 inputPanel(
-  sliderInput(inputId = "choro_year", label = "Year", min = min(data[,YEAR]), max = max(data[,YEAR]), value = min(data[,YEAR]), step = 1),
+  sliderInput(inputId = "choro_year", label = "Year", min = min(data[,YEAR])+1, max = max(data[,YEAR]), value = min(data[,YEAR]), step = 1),
   sliderInput(inputId = "choro_month", label = "Month", min = 1, max = 12, value = 1, step = 1),
-  selectInput(inputId = "choro_feature", label = "Label:", choices =natural_var, selected = natural_var[1])
+  selectInput(inputId = "choro_feature", label = "Label:", choices =all_var, selected = all_var[1])
   
   
 )
@@ -258,24 +271,106 @@ inputPanel(
 renderPlot({
   var = input$choro_feature
   year_mon = paste(input$choro_year,sprintf("%02d", input$choro_month),sep ="")
+  # var = "TEMP"
+  # year_mon= "200303"
+  if (var == "RAIN")
+  {
+    high_col = "#09219F"
+    low_col = "#ADD8E6"
+    tit = "Rain in mm"
+  }
+  else if (var == "biomass")
+  {
+    high_col = "#04751b"
+    low_col = "#A7EC6C"
+    tit = "Biomass cover"
+  }
+  else
+  {
+    high_col = "#D20A04"
+    low_col = "#ffe8b8"
+    if (var == "TEMP")
+    {
+      tit = "Temperature in Celcius"
+    }
+    else
+    {
+      tit = "Number of Conflicts"
+    }
+    
+  }
   
   
-  second = arrange(data[YRMO == year_mon] %>%
+  for_val = arrange(data %>%
                      filter(!is.na(get(var))) %>%
                      mutate(id = as.character(ID_2 + 1)) %>%
-                     group_by(NAME_2, id) %>%
+                     group_by(NAME_2, id, YRMO) %>%
                      summarise(val = mean(get(var))), id)
+  
+  min_val = min(for_val$val, na.rm = TRUE) 
+  max_val = max(for_val$val, na.rm = TRUE)
+   
+  second =  for_val %>%
+    filter(YRMO == year_mon)
   dataframe = merge.data.frame(mydf,second, by = "id", all.x = TRUE)
   dataframe = dataframe[order(dataframe$id,dataframe$order),]
+
+  
+  
   map = ggplot(data =dataframe,aes(x= long, y=lat, group = group))
   map + 
     geom_polygon(aes(fill = val),color = 'white', size = 0.05) +
-    scale_fill_gradient(high = "#ff4a33", low = "#ffe8b8", guide = "guide")+
+    scale_fill_gradient(high = high_col, low = low_col, guide = "colourbar", limits = c(min_val,max_val))+
     coord_fixed(1.3) +
-    guides(fill=guide_colorbar(title=class(year_mon)))  +
+    guides(fill=guide_colorbar(title=tit))  +
     theme_bare
 }
 ) 
-
-
 ```
+
+
+
+
+Prices- Trends
+==================================================
+
+Row {data-heights = 500}
+--------------------------------------------------
+
+
+```{r}
+
+price_var <-  c("Maize (local) - Retail", "Rice (imported) - Retail", "Sorghum - Retail",
+                "Rice (local) - Retail", "Millet - Retail", "Maize (imported) - Retail",
+                "Sorghum (imported) - Retail")
+
+inputPanel(
+  selectInput(inputId = "price_tab", label = "Select Product", choices = price_var, multiple = TRUE, width = '300%'),
+  sliderInput(inputId = "price_date", label = "Year Range", min = 2000, max = 2017, value = c(2010,2014), step = 1))
+
+
+
+renderPlot({
+  
+  input$choro_feature
+  t.data<-price_data[,c(1,2,5,8,17)]
+  t.data$date<-mdy(t.data$date)
+  min_date = paste(input$price_date[1],"-01-01", sep = "")
+  max_date = paste(input$price_date[2],"-12-31", sep = "")
+  t.data<-t.data[date >= min_date & date <= max_date &
+                   cmname  %in% input$price_tab ,]
+  agg.all.prod = t.data %>%
+    group_by(date,cmname) %>%
+    summarise(mean_cost = mean(price, na.rm = TRUE))
+  names(agg.all.prod)<-c("date","Product","mean_cost")
+  ggplot(agg.all.prod, aes(x=date, y=mean_cost, color=Product))+
+    geom_line()+
+    labs(y = "Mean Price across country", x ="Year" )+
+    theme_common + 
+    theme(legend.text=element_text(size=14),
+  legend.title=element_text(size=16))
+
+
+
+}
+) 
